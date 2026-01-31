@@ -9,20 +9,24 @@ export default async function handler(req, res) {
 
     const html = await response.text();
 
-    const regex = /([\d.,]+[KM]?)\s+videos\s+•\s+([\d.,]+[KM]?)\s+channels/i;
-    const match = html.match(regex);
+    // Extract "44K videos • 12K channels"
+    const statsRegex = /([\d.,]+[KM]?)\s+videos\s+•\s+([\d.,]+[KM]?)\s+channels/i;
+    const statsMatch = html.match(statsRegex);
 
-    if (!match) {
+    if (!statsMatch) {
       return res.status(404).json({ error: "Stats not found for this hashtag." });
     }
 
-    const videoUsage = match[1];
-    const channelUsage = match[2];
+    const videoUsage = statsMatch[1];
+    const channelUsage = statsMatch[2];
 
     const videoNum = convertToNumber(videoUsage);
     const channelNum = convertToNumber(channelUsage);
 
     const category = classify(videoNum, channelNum);
+
+    // 🔥 Extract related hashtags from top videos
+    const related = extractRelatedHashtags(html, tag);
 
     res.status(200).json({
       hashtag: `#${tag}`,
@@ -30,7 +34,8 @@ export default async function handler(req, res) {
       channelUsage,
       category: category.name,
       meaning: category.meaning,
-      action: category.action
+      action: category.action,
+      suggestions: related.slice(0, 3) // top 3
     });
 
   } catch (err) {
@@ -38,12 +43,14 @@ export default async function handler(req, res) {
   }
 }
 
+// Convert "11K" → 11000
 function convertToNumber(str) {
   if (str.endsWith("K")) return parseFloat(str) * 1000;
   if (str.endsWith("M")) return parseFloat(str) * 1000000;
   return parseFloat(str);
 }
 
+// Classification logic
 function classify(video, channel) {
   const categories = [
     { name: "Viral", v: 10000000, c: 500000, meaning: "Massive trend. Extremely competitive.", action: "Use 1–2 for reach." },
@@ -61,4 +68,23 @@ function classify(video, channel) {
   }
 
   return categories[categories.length - 1];
+}
+
+// 🔥 Extract related hashtags from the HTML
+function extractRelatedHashtags(html, mainTag) {
+  const hashtagRegex = /#([a-zA-Z0-9_]+)/g;
+  const matches = html.match(hashtagRegex) || [];
+
+  const counts = {};
+
+  matches.forEach(tag => {
+    const clean = tag.replace("#", "").toLowerCase();
+    if (clean !== mainTag.toLowerCase()) {
+      counts[clean] = (counts[clean] || 0) + 1;
+    }
+  });
+
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1]) // sort by frequency
+    .map(entry => entry[0]); // return only the hashtag names
 }
