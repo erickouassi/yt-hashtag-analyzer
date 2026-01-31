@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     const html = await response.text();
 
     // Extract "44K videos • 12K channels"
-    const statsRegex = /([\d.,]+[KM]?)\s+videos\s+•\s+([\d.,]+[KM]?)\s+channels/i;
+    const regex = /([\d.,]+[KMB]?)\s+videos\s+•\s+([\d.,]+[KMB]?)\s+channels/i;
     const statsMatch = html.match(statsRegex);
 
     if (!statsMatch) {
@@ -47,8 +47,10 @@ export default async function handler(req, res) {
 function convertToNumber(str) {
   if (str.endsWith("K")) return parseFloat(str) * 1000;
   if (str.endsWith("M")) return parseFloat(str) * 1000000;
+  if (str.endsWith("B")) return parseFloat(str) * 1000000000;
   return parseFloat(str);
 }
+
 
 // Classification logic
 function classify(video, channel) {
