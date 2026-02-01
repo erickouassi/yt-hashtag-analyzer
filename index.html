@@ -5,13 +5,14 @@
   <style>
     body { font-family: Arial; padding: 20px; }
     input { padding: 10px; width: 250px; font-size: 16px; }
-    button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-right: 5px; }
     #result { 
       margin-top: 20px; 
       padding: 15px; 
       border: 1px solid #ddd; 
       width: 350px; 
       line-height: 1.6;
+      min-height: 50px;
     }
     .tag {
       display: inline-block;
@@ -21,6 +22,19 @@
       border-radius: 5px;
       font-size: 14px;
     }
+    footer {
+      margin-top: 40px;
+      font-size: 14px;
+      color: #555;
+      text-align: center;
+    }
+    footer a {
+      color: #0073e6;
+      text-decoration: none;
+    }
+    footer a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -29,10 +43,30 @@
 
   <input id="tagInput" type="text" placeholder="Enter hashtag (e.g. seekgod)">
   <button onclick="runAnalyzer()">Analyze</button>
+  <button onclick="resetAnalyzer()">Clear</button>
 
   <div id="result"></div>
 
+  <footer>
+    <p>
+      <a href="about.html">About</a> | 
+      <a href="privacy.html">Privacy</a> |
+      <a href="#" id="shareLink" aria-label="Share Hashtag Analyzer">Tell A Friend →</a>
+    </p>
+    <p>© <span id="year"></span> | Made with 🙏🏽 by 
+      <a href="https://erickouassi.com/" target="_blank">Eric</a>
+    </p>
+  </footer>
+
 <script>
+  // Auto-update year
+  document.getElementById("year").textContent = new Date().getFullYear();
+
+  // Allow Enter key to trigger analysis
+  document.getElementById("tagInput").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") runAnalyzer();
+  });
+
   async function runAnalyzer() {
     const tag = document.getElementById("tagInput").value.replace("#", "").trim();
     if (!tag) return alert("Please enter a hashtag");
@@ -79,8 +113,13 @@
       document.getElementById("result").innerHTML = "Error: Failed to fetch data.";
     }
   }
-</script>
 
+  function resetAnalyzer() {
+    document.getElementById("tagInput").value = "";
+    document.getElementById("result").innerHTML = "";
+    console.log("🔄 Analyzer reset");
+  }
+</script>
 
 </body>
 </html>
