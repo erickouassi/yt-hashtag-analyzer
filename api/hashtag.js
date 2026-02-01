@@ -1,7 +1,6 @@
 export default async function handler(req, res) {
   const tag = req.query.tag;
   const url = `https://www.youtube.com/hashtag/${tag}`;
-  console.log(`🔍 Analyzing hashtag: #${tag}`);
 
   try {
     const response = await fetch(url, {
@@ -10,12 +9,11 @@ export default async function handler(req, res) {
 
     const html = await response.text();
 
-    const regex = /([\d.,]+[KMB]?)\s+videos\s+•\s+([\d.,]+[KMB]?)\s+channels/i;
-    const statsMatch = html.match(regex);
-    console.log("📊 Stats match:", statsMatch);
+    // Extract "44K videos • 12K channels"
+    const statsRegex = /([\d.,]+[KMB]?)\s+videos\s+•\s+([\d.,]+[KMB]?)\s+channels/i;
+    const statsMatch = html.match(statsRegex);
 
     if (!statsMatch) {
-      console.log("⚠️ No stats found for this hashtag.");
       return res.status(404).json({ error: "Stats not found for this hashtag." });
     }
 
@@ -24,13 +22,11 @@ export default async function handler(req, res) {
 
     const videoNum = convertToNumber(videoUsage);
     const channelNum = convertToNumber(channelUsage);
-    console.log(`📈 Parsed numbers → Videos: ${videoNum}, Channels: ${channelNum}`);
 
     const category = classify(videoNum, channelNum);
-    console.log(`🏷 Category: ${category.name}`);
 
+    // Extract related hashtags (your working version)
     const related = extractRelatedHashtags(html, tag);
-    console.log("🔗 Final related hashtags:", related.slice(0, 10));
 
     res.status(200).json({
       hashtag: `#${tag}`,
@@ -39,15 +35,15 @@ export default async function handler(req, res) {
       category: category.name,
       meaning: category.meaning,
       action: category.action,
-      suggestions: related.slice(0, 10)
+      suggestions: related.slice(0, 10) // top 10
     });
 
   } catch (err) {
-    console.error("❌ Backend error:", err);
     res.status(500).json({ error: err.message });
   }
 }
 
+// Convert "11K" → 11000, "1.5B" → 1500000000
 function convertToNumber(str) {
   if (str.endsWith("K")) return parseFloat(str) * 1000;
   if (str.endsWith("M")) return parseFloat(str) * 1000000;
@@ -55,6 +51,7 @@ function convertToNumber(str) {
   return parseFloat(str);
 }
 
+// Classification logic
 function classify(video, channel) {
   const categories = [
     { name: "Viral", v: 10000000, c: 500000, meaning: "Massive trend. Extremely competitive.", action: "Use 1–2 for reach." },
@@ -74,47 +71,25 @@ function classify(video, channel) {
   return categories[categories.length - 1];
 }
 
+// Extract related hashtags (your original working version)
 function extractRelatedHashtags(html, mainTag) {
+  const hashtagRegex = /#([a-zA-Z0-9_]+)/g;
+  const matches = html.match(hashtagRegex) || [];
+
   const counts = {};
 
-  const videoBlocks = html.match(/"videoRenderer":\s*{[\s\S]*?}/g) || [];
-  console.log("🎬 videoRenderer blocks:", videoBlocks.length);
-  collectHashtags(videoBlocks, counts, mainTag);
+  matches.forEach(tag => {
+    const clean = tag.replace("#", "").toLowerCase();
 
-  const shortsBlocks = html.match(/"reelItemRenderer":\s*{[\s\S]*?}/g) || [];
-  console.log("🎞 reelItemRenderer blocks:", shortsBlocks.length);
-  collectHashtags(shortsBlocks, counts, mainTag);
+    // avoid junk UI tags
+    if (clean === mainTag.toLowerCase()) return;
+    if (["yt", "youtube", "shorts"].includes(clean)) return;
 
-  if (Object.keys(counts).length < 5) {
-    console.log("⚠️ Fallback triggered — not enough hashtags found.");
-    const mainSection = html.match(/<ytd-page-manager[\s\S]*?<\/ytd-page-manager>/i);
-    if (mainSection) {
-      const fallbackMatches = mainSection[0].match(/#([a-zA-Z0-9_]+)/g) || [];
-      console.log("📦 Fallback hashtags found:", fallbackMatches.length);
-      fallbackMatches.forEach(tag => {
-        const clean = tag.replace("#", "").toLowerCase();
-        if (clean !== mainTag.toLowerCase()) {
-          counts[clean] = (counts[clean] || 0) + 1;
-        }
-      });
-    }
-  }
-
-  console.log("📊 Hashtag frequency map:", counts);
+    counts[clean] = (counts[clean] || 0) + 1;
+  });
 
   return Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .map(entry => entry[0]);
+    .sort((a, b) => b[1] - a[1]) // sort by frequency
+    .map(entry => entry[0]); // return only the hashtag names
 }
 
-function collectHashtags(blocks, counts, mainTag) {
-  blocks.forEach(block => {
-    const hashtags = block.match(/#([a-zA-Z0-9_]+)/g) || [];
-    hashtags.forEach(tag => {
-      const clean = tag.replace("#", "").toLowerCase();
-      if (clean !== mainTag.toLowerCase()) {
-        counts[clean] = (counts[clean] || 0) + 1;
-      }
-    });
-  });
-}
