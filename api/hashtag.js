@@ -9,9 +9,9 @@ export default async function handler(req, res) {
 
     const html = await response.text();
 
-    // Extract "44K videos • 12K channels"
+    // ✅ FIXED: Use correct variable name
     const regex = /([\d.,]+[KMB]?)\s+videos\s+•\s+([\d.,]+[KMB]?)\s+channels/i;
-    const statsMatch = html.match(statsRegex);
+    const statsMatch = html.match(regex);
 
     if (!statsMatch) {
       return res.status(404).json({ error: "Stats not found for this hashtag." });
@@ -25,7 +25,6 @@ export default async function handler(req, res) {
 
     const category = classify(videoNum, channelNum);
 
-    // 🔥 Extract related hashtags from top videos
     const related = extractRelatedHashtags(html, tag);
 
     res.status(200).json({
@@ -35,7 +34,7 @@ export default async function handler(req, res) {
       category: category.name,
       meaning: category.meaning,
       action: category.action,
-      suggestions: related.slice(0, 3) // top 3
+      suggestions: related.slice(0, 3)
     });
 
   } catch (err) {
@@ -43,7 +42,6 @@ export default async function handler(req, res) {
   }
 }
 
-// Convert "11K" → 11000
 function convertToNumber(str) {
   if (str.endsWith("K")) return parseFloat(str) * 1000;
   if (str.endsWith("M")) return parseFloat(str) * 1000000;
@@ -51,8 +49,6 @@ function convertToNumber(str) {
   return parseFloat(str);
 }
 
-
-// Classification logic
 function classify(video, channel) {
   const categories = [
     { name: "Viral", v: 10000000, c: 500000, meaning: "Massive trend. Extremely competitive.", action: "Use 1–2 for reach." },
@@ -72,7 +68,6 @@ function classify(video, channel) {
   return categories[categories.length - 1];
 }
 
-// 🔥 Extract related hashtags from the HTML
 function extractRelatedHashtags(html, mainTag) {
   const hashtagRegex = /#([a-zA-Z0-9_]+)/g;
   const matches = html.match(hashtagRegex) || [];
@@ -87,6 +82,6 @@ function extractRelatedHashtags(html, mainTag) {
   });
 
   return Object.entries(counts)
-    .sort((a, b) => b[1] - a[1]) // sort by frequency
-    .map(entry => entry[0]); // return only the hashtag names
+    .sort((a, b) => b[1] - a[1])
+    .map(entry => entry[0]);
 }
