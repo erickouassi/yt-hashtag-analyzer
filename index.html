@@ -32,23 +32,28 @@
 
   <div id="result"></div>
 
-  <script>
-    async function runAnalyzer() {
-      const tag = document.getElementById("tagInput").value.replace("#", "").trim();
-      if (!tag) return alert("Please enter a hashtag");
+<script>
+  async function runAnalyzer() {
+    const tag = document.getElementById("tagInput").value.replace("#", "").trim();
+    if (!tag) return alert("Please enter a hashtag");
 
-      document.getElementById("result").innerHTML = "Loading...";
+    console.log("🔍 Analyzing hashtag:", tag);
+    document.getElementById("result").innerHTML = "Loading...";
 
-      // 🔥 Replace YOUR-PROJECT with your actual Vercel project name
+    try {
       const response = await fetch(`https://yt-hashtag-analyzer.vercel.app/api/hashtag?tag=${tag}`);
       const data = await response.json();
 
+      console.log("✅ Backend response:", data);
+
       if (data.error) {
+        console.error("❌ Backend error:", data.error);
         document.getElementById("result").innerHTML = "Error: " + data.error;
         return;
       }
 
-      // Build suggestions HTML
+      console.log("📌 Suggestions received:", data.suggestions);
+
       let suggestionsHTML = "";
       if (data.suggestions && data.suggestions.length > 0) {
         suggestionsHTML = `
@@ -69,8 +74,13 @@
 
         ${suggestionsHTML}
       `;
+    } catch (err) {
+      console.error("🚫 Fetch failed:", err);
+      document.getElementById("result").innerHTML = "Error: Failed to fetch data.";
     }
-  </script>
+  }
+</script>
+
 
 </body>
 </html>
