@@ -13,6 +13,8 @@ export default async function handler(req, res) {
     const regex = /([\d.,]+[KMB]?)\s+videos\s+•\s+([\d.,]+[KMB]?)\s+channels/i;
     const statsMatch = html.match(regex);
 
+    console.log("📌 Stats Match:", statsMatch);
+
     if (!statsMatch) {
       return res.status(404).json({ error: "Stats not found for this hashtag." });
     }
@@ -28,6 +30,8 @@ export default async function handler(req, res) {
     // Extract related hashtags (robust 3-layer system)
     const related = extractRelatedHashtags(html, tag);
 
+    console.log("🔥 Final Related Hashtags:", related);
+
     res.status(200).json({
       hashtag: `#${tag}`,
       videoUsage,
@@ -39,6 +43,7 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
+    console.error("❌ Backend Error:", err);
     res.status(500).json({ error: err.message });
   }
 }
@@ -77,17 +82,23 @@ function extractRelatedHashtags(html, mainTag) {
 
   // 1️⃣ Extract from videoRenderer blocks
   const videoBlocks = html.match(/"videoRenderer":\s*{[\s\S]*?}/g) || [];
+  console.log("🎬 videoRenderer blocks found:", videoBlocks.length);
   collectHashtags(videoBlocks, counts, mainTag);
 
   // 2️⃣ Extract from Shorts (reelItemRenderer)
   const shortsBlocks = html.match(/"reelItemRenderer":\s*{[\s\S]*?}/g) || [];
+  console.log("🎞 reelItemRenderer blocks found:", shortsBlocks.length);
   collectHashtags(shortsBlocks, counts, mainTag);
 
   // 3️⃣ Fallback: extract hashtags from main content section only
   if (Object.keys(counts).length < 5) {
+    console.log("⚠️ Fallback activated — not enough hashtags found.");
+
     const mainSection = html.match(/<ytd-page-manager[\s\S]*?<\/ytd-page-manager>/i);
     if (mainSection) {
       const fallbackMatches = mainSection[0].match(/#([a-zA-Z0-9_]+)/g) || [];
+      console.log("📦 Fallback hashtags found:", fallbackMatches.length);
+
       fallbackMatches.forEach(tag => {
         const clean = tag.replace("#", "").toLowerCase();
         if (clean !== mainTag.toLowerCase()) {
@@ -96,6 +107,8 @@ function extractRelatedHashtags(html, mainTag) {
       });
     }
   }
+
+  console.log("📊 Hashtag frequency map:", counts);
 
   return Object.entries(counts)
     .sort((a, b) => b[1] - a[1])
