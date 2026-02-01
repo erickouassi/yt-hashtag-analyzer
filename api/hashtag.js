@@ -1,6 +1,7 @@
 export default async function handler(req, res) {
   const tag = req.query.tag;
   const url = `https://www.youtube.com/hashtag/${tag}`;
+  console.log(`🔍 Analyzing hashtag: #${tag}`);
 
   try {
     const response = await fetch(url, {
@@ -9,11 +10,12 @@ export default async function handler(req, res) {
 
     const html = await response.text();
 
-    // Extract "1.5B videos • 80M channels"
     const regex = /([\d.,]+[KMB]?)\s+videos\s+•\s+([\d.,]+[KMB]?)\s+channels/i;
     const statsMatch = html.match(regex);
+    console.log("📊 Stats match:", statsMatch);
 
     if (!statsMatch) {
+      console.log("⚠️ No stats found for this hashtag.");
       return res.status(404).json({ error: "Stats not found for this hashtag." });
     }
 
@@ -22,11 +24,13 @@ export default async function handler(req, res) {
 
     const videoNum = convertToNumber(videoUsage);
     const channelNum = convertToNumber(channelUsage);
+    console.log(`📈 Parsed numbers → Videos: ${videoNum}, Channels: ${channelNum}`);
 
     const category = classify(videoNum, channelNum);
+    console.log(`🏷 Category: ${category.name}`);
 
-    // Extract related hashtags
     const related = extractRelatedHashtags(html, tag);
+    console.log("🔗 Final related hashtags:", related.slice(0, 10));
 
     res.status(200).json({
       hashtag: `#${tag}`,
@@ -39,11 +43,11 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
+    console.error("❌ Backend error:", err);
     res.status(500).json({ error: err.message });
   }
 }
 
-// Convert "11K" → 11000, "1.5B" → 1500000000
 function convertToNumber(str) {
   if (str.endsWith("K")) return parseFloat(str) * 1000;
   if (str.endsWith("M")) return parseFloat(str) * 1000000;
@@ -51,7 +55,6 @@ function convertToNumber(str) {
   return parseFloat(str);
 }
 
-// Classification logic
 function classify(video, channel) {
   const categories = [
     { name: "Viral", v: 10000000, c: 500000, meaning: "Massive trend. Extremely competitive.", action: "Use 1–2 for reach." },
@@ -71,23 +74,23 @@ function classify(video, channel) {
   return categories[categories.length - 1];
 }
 
-// Robust 3-layer hashtag extraction
 function extractRelatedHashtags(html, mainTag) {
   const counts = {};
 
-  // 1️⃣ Extract from videoRenderer blocks
   const videoBlocks = html.match(/"videoRenderer":\s*{[\s\S]*?}/g) || [];
+  console.log("🎬 videoRenderer blocks:", videoBlocks.length);
   collectHashtags(videoBlocks, counts, mainTag);
 
-  // 2️⃣ Extract from Shorts (reelItemRenderer)
   const shortsBlocks = html.match(/"reelItemRenderer":\s*{[\s\S]*?}/g) || [];
+  console.log("🎞 reelItemRenderer blocks:", shortsBlocks.length);
   collectHashtags(shortsBlocks, counts, mainTag);
 
-  // 3️⃣ Fallback: extract hashtags from main content section only
   if (Object.keys(counts).length < 5) {
+    console.log("⚠️ Fallback triggered — not enough hashtags found.");
     const mainSection = html.match(/<ytd-page-manager[\s\S]*?<\/ytd-page-manager>/i);
     if (mainSection) {
       const fallbackMatches = mainSection[0].match(/#([a-zA-Z0-9_]+)/g) || [];
+      console.log("📦 Fallback hashtags found:", fallbackMatches.length);
       fallbackMatches.forEach(tag => {
         const clean = tag.replace("#", "").toLowerCase();
         if (clean !== mainTag.toLowerCase()) {
@@ -97,12 +100,13 @@ function extractRelatedHashtags(html, mainTag) {
     }
   }
 
+  console.log("📊 Hashtag frequency map:", counts);
+
   return Object.entries(counts)
     .sort((a, b) => b[1] - a[1])
     .map(entry => entry[0]);
 }
 
-// Helper to collect hashtags from blocks
 function collectHashtags(blocks, counts, mainTag) {
   blocks.forEach(block => {
     const hashtags = block.match(/#([a-zA-Z0-9_]+)/g) || [];
