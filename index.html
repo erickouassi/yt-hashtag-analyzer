@@ -2,47 +2,105 @@
 <html>
 <head>
   <title>Hashtag Analyzer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     html, body {
-      height: 100%;
       margin: 0;
-      display: flex;
-      flex-direction: column;
-    }
-
-    body { 
-      font-family: Arial; 
-      padding: 20px; 
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      font-size: 16px;
       box-sizing: border-box;
     }
 
-    input { padding: 10px; width: 250px; font-size: 16px; }
-    button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-right: 5px; }
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
 
-    #result { 
-      margin-top: 20px; 
-      padding: 15px; 
-      border: 1px solid #ddd; 
-      width: 350px; 
+    .main-layout {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      gap: 20px;
+      flex: 1;
+      padding: 20px;
+    }
+
+    .sidebar {
+      flex: 1;
+      min-width: 150px;
+      background: #f9f9f9;
+      border: 1px solid #eee;
+      padding: 15px;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+
+    .center-box {
+      flex: 2;
+      max-width: 450px;
+    }
+
+    h2 {
+      font-size: 1.6rem;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    .input-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+      justify-content: center;
+    }
+
+    input {
+      padding: 10px;
+      font-size: 1rem;
+      min-width: 200px;
+      flex: 1;
+    }
+
+    button {
+      padding: 10px 16px;
+      font-size: 1rem;
+      cursor: pointer;
+      border: none;
+      background: #0073e6;
+      color: white;
+      border-radius: 4px;
+    }
+
+    #result {
+      margin-top: 10px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fafafa;
       line-height: 1.6;
+      font-size: 1rem;
+      word-wrap: break-word;
       min-height: 50px;
     }
 
     .tag {
       display: inline-block;
       background: #f0f0f0;
-      padding: 5px 10px;
-      margin: 3px;
+      padding: 6px 12px;
+      margin: 4px 4px 0 0;
       border-radius: 5px;
-      font-size: 14px;
+      font-size: 0.95rem;
     }
 
     footer {
-      margin-top: auto; /* pushes footer to bottom */
       text-align: center;
-      font-size: 14px;
+      font-size: 1rem;
       color: #555;
-      padding-top: 20px;
+      padding: 20px;
+      border-top: 1px solid #eee;
     }
 
     footer a {
@@ -53,28 +111,78 @@
     footer a:hover {
       text-decoration: underline;
     }
+
+    @media (max-width: 768px) {
+      .main-layout {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .sidebar {
+        width: 100%;
+        max-width: 450px;
+        order: 2; /* sidebars appear after analyzer */
+      }
+
+      .center-box {
+        width: 100%;
+        max-width: 450px;
+        order: 1; /* analyzer stays on top */
+      }
+    }
+    .share-result {
+  font-weight: bold;
+  margin-left: 8px;
+}
+
+.share-result.success {
+  color: green;
+}
+
+.share-result.error {
+  color: red;
+}
+
   </style>
 </head>
 <body>
 
-  <h2>Hashtag Analyzer</h2>
+  <div class="main-layout">
+    <div class="sidebar left-sidebar">
+      <strong>Ad Space</strong><br>
+      Place your promo, banner, or message here.
+    </div>
 
-  <input id="tagInput" type="text" placeholder="Enter hashtag (e.g. seekgod)">
-  <button onclick="runAnalyzer()">Analyze</button>
-  <button onclick="resetAnalyzer()">Clear</button>
+    <div class="center-box">
+      <h2>Hashtag Analyzer</h2>
 
-  <div id="result"></div>
+      <div class="input-group">
+        <input id="tagInput" type="text" placeholder="Enter hashtag (e.g. seekgod)">
+        <button onclick="runAnalyzer()">Analyze</button>
+        <button onclick="resetAnalyzer()">Clear</button>
+      </div>
 
-  <footer>
-    <p>
-      <a href="about.html">About</a> | 
-      <a href="privacy.html">Privacy</a> |
-      <a href="#" id="shareLink">Tell A Friend →</a>
-    </p>
-    <p>© <span id="year"></span> | Made with 🙏🏽 by 
-      <a href="https://erickouassi.com/" target="_blank">Eric</a>
-    </p>
-  </footer>
+      <div id="result"></div>
+    </div>
+
+    <div class="sidebar right-sidebar">
+      <strong>Ad Space</strong><br>
+      Use this space for sponsors, links, or updates.
+    </div>
+  </div>
+
+<footer>
+  <p>
+    <a href="about.html">About</a> | 
+    <a href="privacy.html">Privacy</a> |
+    <a href="#" id="shareLink">Tell A Friend →</a>
+    <span class="share-result" style="margin-left:10px; color:#0073e6;"></span>
+  </p>
+  <p>© <span id="year"></span> | Made with 🙏🏽 by 
+    <a href="https://erickouassi.com/" target="_blank">Eric</a>
+  </p>
+</footer>
+
 
 <script>
   document.getElementById("year").textContent = new Date().getFullYear();
@@ -135,6 +243,50 @@
     document.getElementById("result").innerHTML = "";
     console.log("🔄 Analyzer reset");
   }
+</script>
+<script>
+    // Share link functionality
+async function shareWebsite(event) {
+    event.preventDefault();
+
+    const shareData = {
+        title: document.title, // Automatically use the page title
+        text: 'Hi, I found this website and thought you might like it:',
+        url: window.location.href
+    };
+
+    const resultPara = document.querySelector('.share-result');
+    if (!resultPara) {
+        console.error('Share result element not found');
+        return;
+    }
+
+    // Try Web Share API first
+    if (navigator.share) {
+        try {
+            await navigator.share(shareData);
+            resultPara.textContent = 'Shared successfully! 🙂';
+            resultPara.className = 'share-result success';
+            return;
+        } catch (err) {
+            console.warn('Share failed, falling back to clipboard:', err);
+        }
+    }
+
+    // Fallback: copy to clipboard
+    try {
+        await navigator.clipboard.writeText(shareData.url);
+        resultPara.textContent = 'Link copied to clipboard! 🙂';
+        resultPara.className = 'share-result success';
+    } catch (err) {
+        console.error('Error copying to clipboard:', err);
+        resultPara.textContent = 'Unable to copy link. Please copy it manually: ' + shareData.url;
+        resultPara.className = 'share-result error';
+    }
+}
+
+// Add share link event listener
+document.getElementById('shareLink').addEventListener('click', shareWebsite);
 </script>
 
 </body>
