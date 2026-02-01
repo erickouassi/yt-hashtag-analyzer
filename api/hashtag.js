@@ -25,7 +25,7 @@ export default async function handler(req, res) {
 
     const category = classify(videoNum, channelNum);
 
-    // Extract related hashtags from top videos
+    // Extract related hashtags (robust 3-layer system)
     const related = extractRelatedHashtags(html, tag);
 
     res.status(200).json({
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
       category: category.name,
       meaning: category.meaning,
       action: category.action,
-      suggestions: related.slice(0, 10) // return top 10
+      suggestions: related.slice(0, 10) // top 10
     });
 
   } catch (err) {
@@ -71,25 +71,47 @@ function classify(video, channel) {
   return categories[categories.length - 1];
 }
 
-// Extract related hashtags ONLY from videoRenderer blocks
+// Robust 3-layer hashtag extraction
 function extractRelatedHashtags(html, mainTag) {
-  const videoBlocks = html.match(/"videoRenderer":\s*{[\s\S]*?}/g) || [];
-
   const counts = {};
 
-  videoBlocks.forEach(block => {
-    const hashtags = block.match(/#([a-zA-Z0-9_]+)/g) || [];
+  // 1️⃣ Extract from videoRenderer blocks
+  const videoBlocks = html.match(/"videoRenderer":\s*{[\s\S]*?}/g) || [];
+  collectHashtags(videoBlocks, counts, mainTag);
 
-    hashtags.forEach(tag => {
-      const clean = tag.replace("#", "").toLowerCase();
+  // 2️⃣ Extract from Shorts (reelItemRenderer)
+  const shortsBlocks = html.match(/"reelItemRenderer":\s*{[\s\S]*?}/g) || [];
+  collectHashtags(shortsBlocks, counts, mainTag);
 
-      if (clean !== mainTag.toLowerCase()) {
-        counts[clean] = (counts[clean] || 0) + 1;
-      }
-    });
-  });
+  // 3️⃣ Fallback: extract hashtags from main content section only
+  if (Object.keys(counts).length < 5) {
+    const mainSection = html.match(/<ytd-page-manager[\s\S]*?<\/ytd-page-manager>/i);
+    if (mainSection) {
+      const fallbackMatches = mainSection[0].match(/#([a-zA-Z0-9_]+)/g) || [];
+      fallbackMatches.forEach(tag => {
+        const clean = tag.replace("#", "").toLowerCase();
+        if (clean !== mainTag.toLowerCase()) {
+          counts[clean] = (counts[clean] || 0) + 1;
+        }
+      });
+    }
+  }
 
   return Object.entries(counts)
     .sort((a, b) => b[1] - a[1])
     .map(entry => entry[0]);
 }
+
+// Helper to collect hashtags from blocks
+function collectHashtags(blocks, counts, mainTag) {
+  blocks.forEach(block => {
+    const hashtags = block.match(/#([a-zA-Z0-9_]+)/g) || [];
+    hashtags.forEach(tag => {
+      const clean = tag.replace("#", "").toLowerCase();
+      if (clean !== mainTag.toLowerCase()) {
+        counts[clean] = (counts[clean] || 0) + 1;
+      }
+    });
+  });
+}
+
